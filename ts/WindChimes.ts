@@ -1,8 +1,10 @@
+import HavokPhysics from "@babylonjs/havok";
 import { Mesh, Scene, Engine, 
     Camera, HemisphericLight, Vector3, AssetsManager,
     ArcRotateCamera, KeyboardInfo, KeyboardEventTypes, 
-    EventState, WebXRState, MeshBuilder } from "@babylonjs/core";
+    EventState, WebXRState, MeshBuilder, HavokPlugin } from "@babylonjs/core";
 import { WindChime } from "./WindChime";
+
 export class WindChimes{
     private _canvas:HTMLCanvasElement;
     private _engine:Engine;
@@ -15,6 +17,15 @@ export class WindChimes{
 
         this._engine = new Engine(this._canvas, true);
         this._scene = new Scene(this._engine);
+        HavokPhysics().then((havok) => {
+            const gravityVector = new Vector3(0, -9.81, 0);
+            const physicsPlugin = new HavokPlugin(true, havok);
+            this._scene.enablePhysics(gravityVector, physicsPlugin);
+
+            const testChime = new WindChime(new Vector3(0, 1, 0), 1, this._scene);
+          });
+
+
 
         const light: HemisphericLight = new HemisphericLight("light1", new Vector3(1, 1, 0), this._scene);
 
@@ -26,7 +37,7 @@ export class WindChimes{
         this._camera = camera;
 
 
-        const testChime = new WindChime(new Vector3(0, 1, 0), 1, this._scene);
+        
 
 
 
