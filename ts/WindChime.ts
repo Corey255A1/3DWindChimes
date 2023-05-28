@@ -1,3 +1,5 @@
+//WunderVision 2023
+//www.wundervisionengineering.com
 import { WindChimeRod } from "./WindChimeRod";
 import { Axis, BallAndSocketConstraint, Color3, LinesMesh, Mesh, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Scene, Vector3 } from "@babylonjs/core";
 export class WindChime {

@@ -1,3 +1,5 @@
+//WunderVision 2023
+//www.wundervisionengineering.com
 import { WindChime } from "./WindChime";
 import { WindChimeRod } from "./WindChimeRod";
 

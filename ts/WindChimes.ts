@@ -1,3 +1,5 @@
+//WunderVision 2023
+//www.wundervisionengineering.com
 import HavokPhysics from "@babylonjs/havok";
 import { Mesh, Scene, Engine, 
     Camera, HemisphericLight, Vector3, AssetsManager,

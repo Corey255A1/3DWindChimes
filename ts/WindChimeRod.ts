@@ -1,3 +1,5 @@
+//WunderVision 2023
+//www.wundervisionengineering.com
 import { EventState, IPhysicsCollisionEvent, Mesh, MeshBuilder, PhysicsAggregate, PhysicsBody, PhysicsShapeType, Scene, Vector3 } from "@babylonjs/core";
 
 export class WindChimeRod {
