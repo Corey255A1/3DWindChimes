@@ -8,6 +8,7 @@ export class WindChime {
     private _bodyPhysics: PhysicsAggregate;
     private _knocker: Mesh;
     private _blower: Mesh;
+    private _blowerPhyiscs: PhysicsAggregate;
     private _mainRope: Array<Mesh>;
     private _secondaryRope: Array<Mesh>;
     private _impactCallback: null | ((windChime: WindChime, windChimeRod: WindChimeRod) => void);
@@ -22,7 +23,7 @@ export class WindChime {
 
         // //Clean this craziness up
         this._body = this.createBody(position, radius);
-        this._bodyPhysics = new PhysicsAggregate(this._body, PhysicsShapeType.CYLINDER, { mass: 0, restitution: 1 });
+        this._bodyPhysics = new PhysicsAggregate(this._body, PhysicsShapeType.CYLINDER, { mass: 0, restitution: 0 });
         const knockerOffset = 4;
         const blowerOffset = 10;
         const ropeSegmentLength = 1;
@@ -42,7 +43,7 @@ export class WindChime {
         let ropeSegmentPhysics = mainRopePhysics[0];
         this._bodyPhysics.body.addConstraint(ropeSegmentPhysics.body, joint)
 
-        const physicsKnocker = new PhysicsAggregate(this._knocker, PhysicsShapeType.CYLINDER, { mass: 10, restitution: 1 }, scene);
+        const physicsKnocker = new PhysicsAggregate(this._knocker, PhysicsShapeType.CYLINDER, { mass: 2, restitution: 0 }, scene);
         joint = new BallAndSocketConstraint(
             new Vector3(0, -ropeSegmentLength / 2, 0),
             new Vector3(0, 0.1, 0),
@@ -64,8 +65,8 @@ export class WindChime {
         physicsKnocker.body.addConstraint(ropeSegmentPhysics.body, joint);
 
         lastRopeMesh = this._secondaryRope[this._secondaryRope.length - 1];
-        this._blower = this.createBlower(lastRopeMesh.position.add(new Vector3(0, -radius / 2, 0)), radius / 2);
-        const physicsBlower = new PhysicsAggregate(this._blower, PhysicsShapeType.CYLINDER, { mass: 10, restitution: 1 }, scene);
+        this._blower = this.createBlower(lastRopeMesh.position.add(new Vector3(0, -radius, 0)), radius);
+        this._blowerPhyiscs = new PhysicsAggregate(this._blower, PhysicsShapeType.CYLINDER, { mass: 10, restitution: 0 }, scene);
         joint = new BallAndSocketConstraint(
             new Vector3(0, -ropeSegmentLength / 2, 0),
             new Vector3(0, radius / 2, 0),
@@ -74,8 +75,8 @@ export class WindChime {
             scene
         );
         ropeSegmentPhysics = secondaryRopePhysics[secondaryRopePhysics.length - 1];
-        ropeSegmentPhysics.body.addConstraint(physicsBlower.body, joint);
-        physicsBlower.body.applyImpulse(new Vector3(0, 0, 50), physicsBlower.transformNode.position.add(new Vector3(0, 0, -2)));
+        ropeSegmentPhysics.body.addConstraint(this._blowerPhyiscs.body, joint);
+        //physicsBlower.body.applyImpulse(new Vector3(0, 0, 50), physicsBlower.transformNode.position.add(new Vector3(0, 0, -2)));
 
         this._impactCallback = null;
     }
@@ -97,7 +98,7 @@ export class WindChime {
 
     private makePhysicsRope(rope: Array<Mesh>, ropeSegmentLength: number): Array<PhysicsAggregate> {
         const ropePhysics = rope.map(mesh => {
-            return new PhysicsAggregate(mesh, PhysicsShapeType.CYLINDER, { mass: 1, restitution: 1 }, this._scene);
+            return new PhysicsAggregate(mesh, PhysicsShapeType.CYLINDER, { mass: 0.1, restitution: 0 }, this._scene);
         });
         const bottomOffset = new Vector3(0, -ropeSegmentLength / 2, 0);
         const topOffset = new Vector3(0, ropeSegmentLength / 2, 0);
@@ -196,6 +197,12 @@ export class WindChime {
 
     public onRodImpact(rodImpactCallback:(windChime:WindChime, windChimeRod:WindChimeRod)=>void){
         this._impactCallback = rodImpactCallback;
+    }
+
+    public applyWind(magnitude:number, location:Vector3){
+        const windLocation = this._blowerPhyiscs.transformNode.getAbsolutePosition().add(location);
+        const windDirection = windLocation.clone().normalize().scale(magnitude);
+        this._blowerPhyiscs.body.applyForce(windDirection, windLocation);
     }
 
     public addRod(rod: WindChimeRod) {

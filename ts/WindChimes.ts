@@ -14,6 +14,9 @@ export class WindChimes{
     private _camera:Camera;
     private _audioContext:AudioContext;
     private _windChimeAudioMap:Map<number, WindChimeAudio>
+    private _windChime:WindChime | null;
+    private _windBlowing: boolean;
+    private _windLocation: Vector3;
     constructor(canvasID:string){
         this._canvas = document.getElementById(canvasID) as HTMLCanvasElement;
         if (this._canvas == null) { throw "Could not find canvas"; }
@@ -23,22 +26,27 @@ export class WindChimes{
         this._engine = new Engine(this._canvas, true);
         this._scene = new Scene(this._engine);
         this._windChimeAudioMap = new Map();
+        this._windChime = null;
+        this._windBlowing = false;
+        this._windLocation = new Vector3(0.5, 0, 0.5);
         HavokPhysics().then((havok) => {
             const gravityVector = new Vector3(0, -9.81, 0);
             const physicsPlugin = new HavokPlugin(true, havok);
             this._scene.enablePhysics(gravityVector, physicsPlugin);
 
-            const testChime = new WindChime(new Vector3(0, 1, 0), 1, 5, this._scene);
-            this._windChimeAudioMap.set(6, new WindChimeAudio(testChime.addNewRod(6), this._audioContext));
-            this._windChimeAudioMap.set(7, new WindChimeAudio(testChime.addNewRod(7), this._audioContext));
-            this._windChimeAudioMap.set(8, new WindChimeAudio(testChime.addNewRod(8), this._audioContext));
-            this._windChimeAudioMap.set(9, new WindChimeAudio(testChime.addNewRod(9), this._audioContext));
-            this._windChimeAudioMap.set(10, new WindChimeAudio(testChime.addNewRod(10), this._audioContext));
+            this._windChime = new WindChime(new Vector3(0, 1, 0), 1, 5, this._scene);
+            this._windChimeAudioMap.set(6, new WindChimeAudio(this._windChime.addNewRod(6), this._audioContext));
+            this._windChimeAudioMap.set(7, new WindChimeAudio(this._windChime.addNewRod(7), this._audioContext));
+            this._windChimeAudioMap.set(8, new WindChimeAudio(this._windChime.addNewRod(8), this._audioContext));
+            this._windChimeAudioMap.set(9, new WindChimeAudio(this._windChime.addNewRod(9), this._audioContext));
+            this._windChimeAudioMap.set(10, new WindChimeAudio(this._windChime.addNewRod(10), this._audioContext));
 
             this._canvas.addEventListener('pointerdown',()=>{
                 this._audioContext.resume();
-                testChime.onRodImpact(this.onRodImpact.bind(this));
+                this._windChime?.onRodImpact(this.onRodImpact.bind(this));
             });
+
+            setTimeout(this.applyWind.bind(this), 1000);
             
           });
 
@@ -54,9 +62,12 @@ export class WindChimes{
         this._camera = camera;
 
         window.addEventListener('resize', () => { this._engine.resize(); })
-
         this._engine.runRenderLoop(() => {
             this._scene.render();
+            if(this._windBlowing){
+                this._windChime?.applyWind(10, this._windLocation);
+            }
+            
         });
     }
 
@@ -64,6 +75,18 @@ export class WindChimes{
     private onRodImpact(windChime:WindChime, windChimeRod:WindChimeRod){
         const audio = this._windChimeAudioMap.get(windChimeRod.length);
         audio?.play();
+    }
+
+    public applyWind(){
+        this._windBlowing = true;
+        const radial = Math.random()*2*Math.PI;
+        this._windLocation.set(10*Math.cos(radial), 0, 10*Math.sin(radial));
+        setTimeout(this.removeWind.bind(this), Math.random()*5000+5000);
+    }
+
+    public removeWind(){
+        this._windBlowing = false;
+        setTimeout(this.applyWind.bind(this), Math.random()*1000+5000);
     }
 
 }
