@@ -22,7 +22,12 @@ export class WindChimes{
             const physicsPlugin = new HavokPlugin(true, havok);
             this._scene.enablePhysics(gravityVector, physicsPlugin);
 
-            const testChime = new WindChime(new Vector3(0, 1, 0), 1, this._scene);
+            const testChime = new WindChime(new Vector3(0, 1, 0), 1, 5, this._scene);
+            testChime.addNewRod(6);
+            testChime.addNewRod(7);
+            testChime.addNewRod(8);
+            testChime.addNewRod(9);
+            testChime.addNewRod(10);
           });
 
 

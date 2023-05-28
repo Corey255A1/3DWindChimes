@@ -2,38 +2,47 @@ import { WindChimeRod } from "./WindChimeRod";
 import { Axis, BallAndSocketConstraint, Color3, LinesMesh, Mesh, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Scene, Vector3 } from "@babylonjs/core";
 export class WindChime {
     private _radius: number;
+    private _numberOfRods:number;
     private _rods: Array<WindChimeRod>;
     private _body: Mesh;
+    private _bodyPhysics: PhysicsAggregate;
     private _knocker: Mesh;
     private _blower: Mesh;
     private _mainRope: Array<Mesh>;
     private _secondaryRope: Array<Mesh>;
-    constructor(position: Vector3, radius: number, scene: Scene) {
+    private _scene:Scene;
+    constructor(position: Vector3, radius: number, numberOfRods:number, scene: Scene) {
         this._radius = radius;
+        this._numberOfRods = numberOfRods;
         this._rods = new Array<WindChimeRod>();
-        this._body = this.createBody(position, radius, scene);
-        const physicsBody = new PhysicsAggregate(this._body, PhysicsShapeType.CYLINDER, { mass: 0, restitution: 1 }, scene);
-        const ropeLength = 10;
-        const ropeSegmentLength = 0.5;
-        this._mainRope = this.createRope(position.add(new Vector3(0, -0.1, 0)), ropeLength / 2, ropeSegmentLength, scene);
+        this._scene = scene;
+        
+
+        // //Clean this craziness up
+        this._body = this.createBody(position, radius);
+        this._bodyPhysics = new PhysicsAggregate(this._body, PhysicsShapeType.CYLINDER, { mass: 0, restitution: 1 });
+        const knockerOffset = 4;
+        const blowerOffset = 10;
+        const ropeSegmentLength = 1;
+        this._mainRope = this.createRope(position.add(new Vector3(0, -0.1, 0)), knockerOffset, ropeSegmentLength);
         let lastRopeMesh = this._mainRope[this._mainRope.length - 1];
-        this._knocker = this.createKnocker(lastRopeMesh.position.add(new Vector3(0, -0.35, 0)), radius / 4, scene);
-        this._secondaryRope = this.createRope(this._knocker.position.add(new Vector3(0, -0.1, 0)), ropeLength /2, ropeSegmentLength, scene);
-        const mainRopePhysics = this.makePhysicsRope(this._mainRope, physicsBody);
+        this._knocker = this.createKnocker(lastRopeMesh.position.add(new Vector3(0, -(0.1+ropeSegmentLength/2), 0)), radius / 4);
+        this._secondaryRope = this.createRope(this._knocker.position.add(new Vector3(0, -0.1, 0)), blowerOffset, ropeSegmentLength);
+        const mainRopePhysics = this.makePhysicsRope(this._mainRope, ropeSegmentLength);
         
         let joint = new BallAndSocketConstraint(
             new Vector3(0, -0.1, 0),
-            new Vector3(0, 0.25, 0),
+            new Vector3(0, ropeSegmentLength/2, 0),
             new Vector3(0, 1, 0),
             new Vector3(0, 1, 0),
             scene
         );
         let ropeSegmentPhysics = mainRopePhysics[0];
-        physicsBody.body.addConstraint(ropeSegmentPhysics.body, joint)
+        this._bodyPhysics.body.addConstraint(ropeSegmentPhysics.body, joint)
         
         const physicsKnocker = new PhysicsAggregate(this._knocker, PhysicsShapeType.CYLINDER, { mass: 10, restitution: 1 }, scene);
         joint = new BallAndSocketConstraint(
-            new Vector3(0, -0.25, 0),
+            new Vector3(0, -ropeSegmentLength/2, 0),
             new Vector3(0, 0.1, 0),
             new Vector3(0, 1, 0),
             new Vector3(0, 1, 0),
@@ -41,10 +50,10 @@ export class WindChime {
         );
         ropeSegmentPhysics = mainRopePhysics[mainRopePhysics.length - 1];
         ropeSegmentPhysics.body.addConstraint(physicsKnocker.body, joint);
-        const secondaryRopePhysics = this.makePhysicsRope(this._secondaryRope, physicsBody);
+        const secondaryRopePhysics = this.makePhysicsRope(this._secondaryRope, ropeSegmentLength);
         joint = new BallAndSocketConstraint(
             new Vector3(0, -0.1, 0),
-            new Vector3(0, 0.25, 0),
+            new Vector3(0, ropeSegmentLength/2, 0),
             new Vector3(0, 1, 0),
             new Vector3(0, 1, 0),
             scene
@@ -53,10 +62,10 @@ export class WindChime {
         physicsKnocker.body.addConstraint(ropeSegmentPhysics.body, joint);
 
         lastRopeMesh = this._secondaryRope[this._secondaryRope.length - 1];
-        this._blower = this.createBlower(lastRopeMesh.position.add(new Vector3(0, -radius / 2, 0)), radius / 2, scene);
+        this._blower = this.createBlower(lastRopeMesh.position.add(new Vector3(0, -radius / 2, 0)), radius / 2);
         const physicsBlower = new PhysicsAggregate(this._blower, PhysicsShapeType.CYLINDER, { mass: 10, restitution: 1 }, scene);
         joint = new BallAndSocketConstraint(
-            new Vector3(0, -0.25, 0),
+            new Vector3(0, -ropeSegmentLength/2, 0),
             new Vector3(0, radius/2, 0),
             new Vector3(0, 1, 0),
             new Vector3(0, 1, 0),
@@ -64,31 +73,29 @@ export class WindChime {
         );
         ropeSegmentPhysics = secondaryRopePhysics[secondaryRopePhysics.length - 1];
         ropeSegmentPhysics.body.addConstraint(physicsBlower.body, joint);
-        physicsBlower.body.applyImpulse(new Vector3(0,0,25), physicsBlower.transformNode.position.add(new Vector3(0,0,-10)));
+        physicsBlower.body.applyImpulse(new Vector3(0,0,50), physicsBlower.transformNode.position.add(new Vector3(0,0,-2)));
 
     }
 
 
 
-    private createBody(position: Vector3, radius: number, scene: Scene): Mesh {
+    private createBody(position: Vector3, radius: number): Mesh {
         const body = MeshBuilder.CreateCylinder('windchime', {
             height: 0.2,
             diameter: radius * 2
-        }, scene);
+        }, this._scene);
 
         body.position.copyFrom(position);
         return body;
     }
 
-    private makePhysicsRope(rope: Array<Mesh>, mountObject: PhysicsAggregate): Array<PhysicsAggregate> {
-        const scene = rope[0].getScene();
+    private makePhysicsRope(rope: Array<Mesh>, ropeSegmentLength:number): Array<PhysicsAggregate> {
         const ropePhysics = rope.map(mesh => {
-            return new PhysicsAggregate(mesh, PhysicsShapeType.CAPSULE, { mass: 0.1, restitution: 1 }, scene);
+            return new PhysicsAggregate(mesh, PhysicsShapeType.CYLINDER, { mass: 1, restitution: 1 }, this._scene);
         });
-        const bottomOffset = new Vector3(0, -0.25, 0);
-        const topOffset = new Vector3(0, 0.25, 0);
+        const bottomOffset = new Vector3(0, -ropeSegmentLength/2, 0);
+        const topOffset = new Vector3(0, ropeSegmentLength/2, 0);
         ropePhysics.forEach((ropeSegment, index) => {
-            let mount: PhysicsAggregate;
             if (index == 0) {
                 return;
             }
@@ -97,7 +104,7 @@ export class WindChime {
                 bottomOffset,
                 new Vector3(0, 1, 0),
                 new Vector3(0, 1, 0),
-                scene
+                this._scene
             );
             ropeSegment.body.addConstraint(ropePhysics[index-1].body, joint);
         })
@@ -105,50 +112,80 @@ export class WindChime {
         return ropePhysics;
     }
 
-    private createRope(position: Vector3, ropeLength: number, ropeSegmentLength:number, scene: Scene): Array<Mesh> {
+    private createRope(position: Vector3, ropeLength: number, ropeSegmentLength:number): Array<Mesh> {
         const ropeSegments = ropeLength / ropeSegmentLength - 1;
         const segments = new Array<Mesh>();
         let ropePosition = position.add(new Vector3(0, -ropeSegmentLength/2, 0));
         for (let i = 0; i < ropeSegments; i++) {
             const body = MeshBuilder.CreateCylinder('rope', {
                 height: ropeSegmentLength,
-                diameter: 0.1
-            }, scene);
+                diameter: 0.05
+            }, this._scene);
             body.position = ropePosition;
             ropePosition = ropePosition.add(new Vector3(0, -ropeSegmentLength, 0));
-            console.log(body.position)
             segments.push(body);
         }
         return segments;
     }
 
-    private createKnocker(position: Vector3, radius: number, scene: Scene): Mesh {
+    private createKnocker(position: Vector3, radius: number): Mesh {
         const body = MeshBuilder.CreateCylinder('knocker', {
             height: 0.2,
             diameter: radius * 2
-        }, scene);
+        }, this._scene);
 
         body.position = position;
         return body;
     }
 
-    private createBlower(position: Vector3, radius: number, scene: Scene): Mesh {
-        const body = MeshBuilder.CreateCylinder('windchime', {
+    private createBlower(position: Vector3, radius: number): Mesh {
+        const body = MeshBuilder.CreateCylinder('blower', {
             height: 0.2,
             diameter: radius * 2
-        }, scene);
+        }, this._scene);
         body.addRotation(Math.PI / 2, 0, 0);
         body.bakeCurrentTransformIntoVertices();
         body.position = position;
         return body;
     }
 
-
-
-
-
     private distributeRods() {
 
+    }
+
+    public addNewRod(length:number):WindChimeRod{
+        const radius = this._radius - 0.2;
+        const currentRod = this._rods.length * (2 * Math.PI / this._numberOfRods);        
+        const x = radius*Math.cos(currentRod);
+        const z = radius*Math.sin(currentRod);
+        const ropeSegmentLength = 0.2;
+        const rodRope = this.createRope(this._body.position.add(new Vector3(x, -0.1, z)), 1, ropeSegmentLength);
+        const rod = new WindChimeRod(new Vector3(x, (rodRope[rodRope.length-1].position.y-ropeSegmentLength/2)-length/2, z), length, 0.2, this._scene);
+        const rodRopePhyiscs = this.makePhysicsRope(rodRope, ropeSegmentLength);
+
+        let joint = new BallAndSocketConstraint(
+            new Vector3(x, -0.1, z),
+            new Vector3(0, ropeSegmentLength/2, 0),
+            new Vector3(0, 1, 0),
+            new Vector3(0, 1, 0),
+            this._scene
+        );
+        let ropeSegmentPhysics = rodRopePhyiscs[0];
+        this._bodyPhysics.body.addConstraint(ropeSegmentPhysics.body, joint)
+
+        joint = new BallAndSocketConstraint(
+            new Vector3(0, -ropeSegmentLength/2, 0),
+            new Vector3(0, length/2, 0),
+            new Vector3(0, 1, 0),
+            new Vector3(0, 1, 0),
+            this._scene
+        );
+        ropeSegmentPhysics = rodRopePhyiscs[rodRopePhyiscs.length - 1];
+        ropeSegmentPhysics.body.addConstraint(rod.body, joint);
+        
+        this.addRod(rod);
+
+        return rod;
     }
 
     public addRod(rod: WindChimeRod) {
