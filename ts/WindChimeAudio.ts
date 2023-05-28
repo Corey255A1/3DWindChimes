@@ -7,14 +7,17 @@ export class WindChimeAudio {
         261.63, // C
         293.66, // D
         329.63, // E
-        349.23, // F
+        //349.23, // F
         392.00, // G
         440.00, // A
-        493.88, // B
+       // 493.88, // B
     ];
 
     public static getFrequency(index: number): number {
+        index = 10 - index;
         if (index <= 0) { index = 1; }
+        else if(index >= 10){ index = 10; }
+        
         const normalized = ((index - 1) % this.FREQUENCIES.length);
         return this.FREQUENCIES[normalized] * ((index/this.FREQUENCIES.length) + 1);
     }

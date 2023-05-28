@@ -29,7 +29,7 @@ export class WindChime {
         const ropeSegmentLength = 1;
         this._mainRope = this.createRope(position.add(new Vector3(0, -0.1, 0)), knockerOffset, ropeSegmentLength);
         let lastRopeMesh = this._mainRope[this._mainRope.length - 1];
-        this._knocker = this.createKnocker(lastRopeMesh.position.add(new Vector3(0, -(0.1 + ropeSegmentLength / 2), 0)), radius / 4);
+        this._knocker = this.createKnocker(lastRopeMesh.position.add(new Vector3(0, -(0.1 + ropeSegmentLength / 2), 0)), radius*0.4);
         this._secondaryRope = this.createRope(this._knocker.position.add(new Vector3(0, -0.1, 0)), blowerOffset, ropeSegmentLength);
         const mainRopePhysics = this.makePhysicsRope(this._mainRope, ropeSegmentLength);
 
@@ -65,11 +65,11 @@ export class WindChime {
         physicsKnocker.body.addConstraint(ropeSegmentPhysics.body, joint);
 
         lastRopeMesh = this._secondaryRope[this._secondaryRope.length - 1];
-        this._blower = this.createBlower(lastRopeMesh.position.add(new Vector3(0, -radius, 0)), radius);
+        this._blower = this.createBlower(lastRopeMesh.position.add(new Vector3(0, -radius-(ropeSegmentLength/2), 0)), radius/2);
         this._blowerPhyiscs = new PhysicsAggregate(this._blower, PhysicsShapeType.CYLINDER, { mass: 10, restitution: 0 }, scene);
         joint = new BallAndSocketConstraint(
             new Vector3(0, -ropeSegmentLength / 2, 0),
-            new Vector3(0, radius / 2, 0),
+            new Vector3(0, 0, -radius/2),
             new Vector3(0, 1, 0),
             new Vector3(0, 1, 0),
             scene
@@ -151,7 +151,7 @@ export class WindChime {
             diameter: radius * 2
         }, this._scene);
         body.addRotation(Math.PI / 2, 0, 0);
-        body.bakeCurrentTransformIntoVertices();
+        //body.bakeCurrentTransformIntoVertices();
         body.position = position;
         return body;
     }
@@ -201,8 +201,8 @@ export class WindChime {
 
     public applyWind(magnitude:number, location:Vector3){
         const windLocation = this._blowerPhyiscs.transformNode.getAbsolutePosition().add(location);
-        const windDirection = windLocation.clone().normalize().scale(magnitude);
-        this._blowerPhyiscs.body.applyForce(windDirection, windLocation);
+        const windDirection = windLocation.clone().normalize().scale(-magnitude);
+        this._blowerPhyiscs.body.applyForce(windDirection, this._blowerPhyiscs.transformNode.getAbsolutePosition());
     }
 
     public addRod(rod: WindChimeRod) {

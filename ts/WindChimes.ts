@@ -2,7 +2,7 @@ import HavokPhysics from "@babylonjs/havok";
 import { Mesh, Scene, Engine, 
     Camera, HemisphericLight, Vector3, AssetsManager,
     ArcRotateCamera, KeyboardInfo, KeyboardEventTypes, 
-    EventState, WebXRState, MeshBuilder, HavokPlugin } from "@babylonjs/core";
+    EventState, WebXRState, MeshBuilder, HavokPlugin, PhysicsViewer } from "@babylonjs/core";
 import { WindChime } from "./WindChime";
 import { WindChimeRod } from "./WindChimeRod";
 import { WindChimeAudio } from "./WindChimeAudio";
@@ -35,11 +35,11 @@ export class WindChimes{
             this._scene.enablePhysics(gravityVector, physicsPlugin);
 
             this._windChime = new WindChime(new Vector3(0, 1, 0), 1, 5, this._scene);
+            this._windChimeAudioMap.set(5, new WindChimeAudio(this._windChime.addNewRod(5), this._audioContext));
             this._windChimeAudioMap.set(6, new WindChimeAudio(this._windChime.addNewRod(6), this._audioContext));
             this._windChimeAudioMap.set(7, new WindChimeAudio(this._windChime.addNewRod(7), this._audioContext));
             this._windChimeAudioMap.set(8, new WindChimeAudio(this._windChime.addNewRod(8), this._audioContext));
             this._windChimeAudioMap.set(9, new WindChimeAudio(this._windChime.addNewRod(9), this._audioContext));
-            this._windChimeAudioMap.set(10, new WindChimeAudio(this._windChime.addNewRod(10), this._audioContext));
 
             this._canvas.addEventListener('pointerdown',()=>{
                 this._audioContext.resume();
@@ -47,6 +47,14 @@ export class WindChimes{
             });
 
             setTimeout(this.applyWind.bind(this), 1000);
+
+            // const physicsViewer = new PhysicsViewer();
+            // for (const mesh of this._scene.rootNodes) {
+            //     const body = (mesh as Mesh).physicsBody;
+            //     if (body != null) {
+            //         const debugMesh = physicsViewer.showBody(body);
+            //     }
+            // }
             
           });
 
@@ -65,10 +73,12 @@ export class WindChimes{
         this._engine.runRenderLoop(() => {
             this._scene.render();
             if(this._windBlowing){
-                this._windChime?.applyWind(10, this._windLocation);
+                this._windChime?.applyWind(25, this._windLocation);
             }
             
         });
+
+
     }
 
 
