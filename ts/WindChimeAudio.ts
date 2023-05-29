@@ -29,15 +29,22 @@ export class WindChimeAudio {
     private _oscillator: OscillatorNode;
     private _gainNode: GainNode;
     private _oscillatorRunning: boolean;
-    constructor(windChime: WindChimeRod, audioContext: AudioContext) {
+    private _windChimeRod:WindChimeRod;
+    constructor(windChimeRod: WindChimeRod, audioContext: AudioContext) {
+        this._windChimeRod = windChimeRod;
         this._audioContext = audioContext;
-        var frequency = WindChimeAudio.getFrequency(windChime.length);
-        var gain = 1;
-        this._oscillator = this._audioContext.createOscillator();
-        this._oscillator.frequency.setValueAtTime(frequency, this._audioContext.currentTime);
         this._oscillatorRunning = false;
-
+        this._oscillator = this._audioContext.createOscillator();
         this._gainNode = this._audioContext.createGain();
+        this.initializeAudio();
+        this._windChimeRod.addEventListener("impact", this.play.bind(this));
+    }
+
+    private initializeAudio(){
+        const frequency = WindChimeAudio.getFrequency(this._windChimeRod.length);
+        const gain = 0;
+        this._oscillator.frequency.setValueAtTime(frequency, this._audioContext.currentTime);
+        
         this._gainNode.gain.setValueAtTime(gain, this._audioContext.currentTime);
 
         this._oscillator.connect(this._gainNode);
@@ -48,9 +55,12 @@ export class WindChimeAudio {
         if(!this._oscillatorRunning){
             this._oscillator.start();
             this._oscillatorRunning = true;
-        }        
-        this._gainNode.gain.setValueAtTime(1, this._audioContext.currentTime);
-        this._gainNode.gain.setTargetAtTime(0, this._audioContext.currentTime, 0.8);
-        console.log(this._gainNode.gain.value)
+        }
+        
+        if(this._gainNode.gain.value < 0.8){
+            this._gainNode.gain.setValueAtTime(1, this._audioContext.currentTime);
+            this._gainNode.gain.setTargetAtTime(0, this._audioContext.currentTime, 0.6);
+        }
+
     }
 }

@@ -5,7 +5,7 @@ import { Mesh, Scene, Engine,
     Camera, HemisphericLight, Vector3, AssetsManager,
     ArcRotateCamera, KeyboardInfo, KeyboardEventTypes, 
     EventState, WebXRState, MeshBuilder, HavokPlugin, PhysicsViewer } from "@babylonjs/core";
-import { WindChime } from "./WindChime";
+import { WindChime, WindChimeEventData } from "./WindChime";
 import { WindChimeRod } from "./WindChimeRod";
 import { WindChimeAudio } from "./WindChimeAudio";
 
@@ -15,7 +15,7 @@ export class WindChimes{
     private _scene:Scene;
     private _camera:Camera;
     private _audioContext:AudioContext;
-    private _windChimeAudioMap:Map<number, WindChimeAudio>
+    private _windChimeAudios:Array<WindChimeAudio>;
     private _windChime:WindChime | null;
     private _windBlowing: boolean;
     private _windLocation: Vector3;
@@ -27,7 +27,7 @@ export class WindChimes{
 
         this._engine = new Engine(this._canvas, true);
         this._scene = new Scene(this._engine);
-        this._windChimeAudioMap = new Map();
+        this._windChimeAudios = new Array<WindChimeAudio>();
         this._windChime = null;
         this._windBlowing = false;
         this._windLocation = new Vector3(0.5, 0, 0.5);
@@ -37,15 +37,15 @@ export class WindChimes{
             this._scene.enablePhysics(gravityVector, physicsPlugin);
 
             this._windChime = new WindChime(new Vector3(0, 1, 0), 1, 5, this._scene);
-            this._windChimeAudioMap.set(5, new WindChimeAudio(this._windChime.addNewRod(5), this._audioContext));
-            this._windChimeAudioMap.set(6, new WindChimeAudio(this._windChime.addNewRod(6), this._audioContext));
-            this._windChimeAudioMap.set(7, new WindChimeAudio(this._windChime.addNewRod(7), this._audioContext));
-            this._windChimeAudioMap.set(8, new WindChimeAudio(this._windChime.addNewRod(8), this._audioContext));
-            this._windChimeAudioMap.set(9, new WindChimeAudio(this._windChime.addNewRod(9), this._audioContext));
+            this._windChimeAudios.push(new WindChimeAudio(this._windChime.addNewRod(5), this._audioContext));
+            this._windChimeAudios.push(new WindChimeAudio(this._windChime.addNewRod(6), this._audioContext));
+            this._windChimeAudios.push(new WindChimeAudio(this._windChime.addNewRod(7), this._audioContext));
+            this._windChimeAudios.push(new WindChimeAudio(this._windChime.addNewRod(8), this._audioContext));
+            this._windChimeAudios.push(new WindChimeAudio(this._windChime.addNewRod(9), this._audioContext));
 
             this._canvas.addEventListener('pointerdown',()=>{
                 this._audioContext.resume();
-                this._windChime?.onRodImpact(this.onRodImpact.bind(this));
+                this._windChime?.addEventListener("impact",this.onRodImpact.bind(this));
             });
 
             setTimeout(this.applyWind.bind(this), 1000);
@@ -84,9 +84,7 @@ export class WindChimes{
     }
 
 
-    private onRodImpact(windChime:WindChime, windChimeRod:WindChimeRod){
-        const audio = this._windChimeAudioMap.get(windChimeRod.length);
-        audio?.play();
+    private onRodImpact(event:Event){
     }
 
     public applyWind(){
