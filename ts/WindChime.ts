@@ -2,7 +2,7 @@
 //www.wundervisionengineering.com
 import { Rope } from "./Rope";
 import { WindChimeRod } from "./WindChimeRod";
-import { Axis, BallAndSocketConstraint, Color3, LinesMesh, Mesh, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Scene, Vector3 } from "@babylonjs/core";
+import { Axis, BallAndSocketConstraint, Color3, LinesMesh, Material, Mesh, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Scene, StandardMaterial, Vector3 } from "@babylonjs/core";
 
 export interface WindChimeEventData {
     windChime: WindChime,
@@ -14,6 +14,7 @@ export class WindChime extends EventTarget {
     private _numberOfRods: number;
     private _rods: Array<WindChimeRod>;
     private _discThickness: number;
+    private _discMaterial: Material;
     private _body: Mesh;
     private _bodyPhysics: PhysicsAggregate;
     private _knocker: Mesh;
@@ -22,7 +23,7 @@ export class WindChime extends EventTarget {
     private _mainRope: Rope;
     private _secondaryRope: Rope;
     private _scene: Scene;
-
+    
     constructor(position: Vector3, radius: number, numberOfRods: number, scene: Scene) {
         super();
         this._radius = radius;
@@ -36,18 +37,24 @@ export class WindChime extends EventTarget {
         const halfRopeSegmentLenght = ropeSegmentLength / 2;
         this._discThickness = 0.2;
         const halfDiscThickness = this._discThickness / 2;
-
+        const material = new StandardMaterial('disc_material', scene);
+        material.diffuseColor = new Color3(0.4, 0.4, 0.3);
+        material.specularColor = new Color3(0.3, 0.3, 0.2);
+        this._discMaterial = material;
         this._body = this.createBody(position, radius, this._discThickness);
+        this._body.material = this._discMaterial;
         this._bodyPhysics = new PhysicsAggregate(this._body, PhysicsShapeType.CYLINDER, { mass: 0, restitution: 0 });
 
         this._mainRope = new Rope(position.add(new Vector3(0, -halfDiscThickness, 0)), knockerOffset, ropeSegmentLength, this._scene);
 
         this._knocker = this.createKnocker(this._mainRope.bottom.add(new Vector3(0, -halfDiscThickness, 0)), radius * 0.4, this._discThickness);
+        this._knocker.material = this._discMaterial;
         const physicsKnocker = new PhysicsAggregate(this._knocker, PhysicsShapeType.CYLINDER, { mass: 2, restitution: 0 }, scene);
 
         this._secondaryRope = new Rope(this._knocker.position.add(new Vector3(0, -halfDiscThickness, 0)), blowerOffset, ropeSegmentLength, this._scene);
 
         this._blower = this.createBlower(this._secondaryRope.bottom.add(new Vector3(0, -radius, 0)), radius / 2, this._discThickness);
+        this._blower.material = this._discMaterial;
         this._blowerPhyiscs = new PhysicsAggregate(this._blower, PhysicsShapeType.CYLINDER, { mass: 10, restitution: 0 }, scene);
 
 

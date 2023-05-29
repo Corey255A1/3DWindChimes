@@ -1,6 +1,6 @@
 //WunderVision 2023
 //www.wundervisionengineering.com
-import { EventState, IPhysicsCollisionEvent, Mesh, MeshBuilder, PhysicsAggregate, PhysicsBody, PhysicsShapeType, Scene, Vector3 } from "@babylonjs/core";
+import { Color3, EventState, IPhysicsCollisionEvent, Mesh, MeshBuilder, PhysicsAggregate, PhysicsBody, PhysicsShapeType, Scene, StandardMaterial, Vector3 } from "@babylonjs/core";
 
 export class WindChimeRod extends EventTarget{
     private _length: number;
@@ -15,7 +15,11 @@ export class WindChimeRod extends EventTarget{
             height: length,
             diameter: radius * 2
         }, scene);
-        
+
+        const material = new StandardMaterial('rod_material', scene);
+        material.diffuseColor = new Color3(0.1, 0.1, 0.1);
+        material.specularColor = new Color3(0.1, 0.1, 0.2);
+        this._rod.material = material;
         this._rod.position = position;
 
         this._rodPhysics = new PhysicsAggregate(this._rod, PhysicsShapeType.CYLINDER, { mass: length, restitution: 1 }, scene);

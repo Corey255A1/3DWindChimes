@@ -1,4 +1,4 @@
-import { BallAndSocketConstraint, Mesh, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Scene, Vector3 } from "@babylonjs/core";
+import { BallAndSocketConstraint, Color3, Mesh, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Scene, StandardMaterial, Vector3 } from "@babylonjs/core";
 
 export class Rope {
     private _scene: Scene;
@@ -11,15 +11,18 @@ export class Rope {
         const ropeSegments = length / segmentLength - 1;
         this._segments = new Array<Mesh>();
         let ropePosition = position.add(new Vector3(0, -segmentLength / 2, 0));
-        
+        const material = new StandardMaterial('rope_material', scene);
+        material.diffuseColor = new Color3(0.0, 0.0, 0.0);
+        material.specularColor = new Color3(0.0, 0.0, 0.0);
         for (let i = 0; i < ropeSegments; i++) {
-            const body = MeshBuilder.CreateCylinder('rope_segment', {
+            const ropeSegments = MeshBuilder.CreateCylinder('rope_segment', {
                 height: segmentLength,
-                diameter: 0.05
+                diameter: 0.01
             }, this._scene);
-            body.position = ropePosition;
+            ropeSegments.position = ropePosition;
+            ropeSegments.material = material;
             ropePosition = ropePosition.add(new Vector3(0, -segmentLength, 0));
-            this._segments.push(body);
+            this._segments.push(ropeSegments);
         }
 
         this._physicsSegments = this.makePhysics();
