@@ -4,7 +4,7 @@ import HavokPhysics from "@babylonjs/havok";
 import { Mesh, Scene, Engine, 
     Camera, HemisphericLight, Vector3, AssetsManager,
     ArcRotateCamera, KeyboardInfo, KeyboardEventTypes, 
-    EventState, WebXRState, MeshBuilder, HavokPlugin, PhysicsViewer } from "@babylonjs/core";
+    EventState, WebXRState, MeshBuilder, HavokPlugin, PhysicsViewer, EquiRectangularCubeTexture, PBRMaterial, Texture } from "@babylonjs/core";
 import { WindChime, WindChimeEventData } from "./WindChime";
 import { WindChimeRod } from "./WindChimeRod";
 import { WindChimeAudio } from "./WindChimeAudio";
@@ -25,8 +25,20 @@ export class WindChimes{
 
         this._audioContext = new AudioContext();
 
-        this._engine = new Engine(this._canvas, true);
+        this._engine = new Engine(this._canvas, true);        
         this._scene = new Scene(this._engine);
+
+        const backgroundTexture = new EquiRectangularCubeTexture('360view_low.jpg', this._scene, 512);
+        const skybox = MeshBuilder.CreateBox("skybox", {size:1000.0}, this._scene);
+        const skyboxMaterial = new PBRMaterial("skybox_material", this._scene);
+        skyboxMaterial.backFaceCulling = false;
+        skyboxMaterial.reflectionTexture = backgroundTexture.clone();
+        skyboxMaterial.reflectionTexture.coordinatesMode = Texture.SKYBOX_MODE;
+        skyboxMaterial.microSurface = 1.0;
+        skyboxMaterial.disableLighting = false;
+        skybox.material = skyboxMaterial;
+        skybox.infiniteDistance = true;
+
         this._windChimeAudios = new Array<WindChimeAudio>();
         this._windChime = null;
         this._windBlowing = false;
