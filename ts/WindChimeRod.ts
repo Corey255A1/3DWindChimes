@@ -1,6 +1,6 @@
 //WunderVision 2023
 //www.wundervisionengineering.com
-import { Color3, EventState, IPhysicsCollisionEvent, Mesh, MeshBuilder, PhysicsAggregate, PhysicsBody, PhysicsShapeType, Scene, StandardMaterial, Vector3 } from "@babylonjs/core";
+import { Color3, EventState, IPhysicsCollisionEvent, Mesh, MeshBuilder, PBRMaterial, PhysicsAggregate, PhysicsBody, PhysicsShapeType, Scene, StandardMaterial, Vector3 } from "@babylonjs/core";
 
 export class WindChimeRod extends EventTarget{
     private _length: number;
@@ -11,14 +11,24 @@ export class WindChimeRod extends EventTarget{
         super()
         this._length = length;
         this._radius = radius;
-        this._rod = MeshBuilder.CreateCylinder('rod', {
-            height: length,
-            diameter: radius * 2
-        }, scene);
+        const halfLength = length/2;
+        this._rod = MeshBuilder.CreateTube('rod', {
+            path:[new Vector3(0,halfLength,0), new Vector3(0,-halfLength,0)], 
+            sideOrientation:Mesh.DOUBLESIDE, radius:radius});
 
-        const material = new StandardMaterial('rod_material', scene);
-        material.diffuseColor = new Color3(0.1, 0.1, 0.1);
-        material.specularColor = new Color3(0.1, 0.1, 0.2);
+        // this._rod = MeshBuilder.CreateCylinder('rod', {
+        //     height: length,
+        //     diameter: radius * 2
+        // }, scene);
+
+        // const material = new StandardMaterial('rod_material', scene);
+        // material.diffuseColor = new Color3(0.1, 0.1, 0.1);
+        // material.specularColor = new Color3(0.1, 0.1, 0.2);
+
+        const material = new PBRMaterial('rodMaterial');
+        material.roughness = 0.5;
+        material.metallic = 0.8;
+        material.albedoColor = new Color3(0,0,0);
         this._rod.material = material;
         this._rod.position = position;
 

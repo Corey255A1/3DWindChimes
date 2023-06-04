@@ -2,7 +2,7 @@
 //www.wundervisionengineering.com
 import { Rope } from "./Rope";
 import { WindChimeRod } from "./WindChimeRod";
-import { Axis, BallAndSocketConstraint, Color3, LinesMesh, Material, Mesh, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Scene, StandardMaterial, Vector3 } from "@babylonjs/core";
+import { Axis, BallAndSocketConstraint, Color3, LinesMesh, Material, Mesh, MeshBuilder, PBRMaterial, PhysicsAggregate, PhysicsShapeType, Scene, StandardMaterial, Texture, Vector3 } from "@babylonjs/core";
 
 export interface WindChimeEventData {
     windChime: WindChime,
@@ -37,10 +37,20 @@ export class WindChime extends EventTarget {
         const halfRopeSegmentLenght = ropeSegmentLength / 2;
         this._discThickness = 0.2;
         const halfDiscThickness = this._discThickness / 2;
-        const material = new StandardMaterial('disc_material', scene);
-        material.diffuseColor = new Color3(0.4, 0.4, 0.3);
-        material.specularColor = new Color3(0.3, 0.3, 0.2);
+
+        // const material = new StandardMaterial('disc_material', scene);
+        // material.diffuseColor = new Color3(0.4, 0.4, 0.3);
+        // material.specularColor = new Color3(0.3, 0.3, 0.2);
+
+        const material = new PBRMaterial('disc_material', scene);
+        material.roughness = 1;
+        material.metallic = 1;
+        //https://freepbr.com/materials/bamboo-wood-pbr-material/
+        material.albedoTexture = new Texture('bamboo-wood-semigloss-albedo.png');
+        material.bumpTexture = new Texture('bamboo-wood-semigloss-normal.png');
+        material.metallicTexture = new Texture('bamboo-wood-semigloss-roughness.png');
         this._discMaterial = material;
+
         this._body = this.createBody(position, radius, this._discThickness);
         this._body.material = this._discMaterial;
         this._bodyPhysics = new PhysicsAggregate(this._body, PhysicsShapeType.CYLINDER, { mass: 0, restitution: 0 });

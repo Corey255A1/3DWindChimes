@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@babylonjs/core": "^6.5.0",
+    "@babylonjs/gui": "^6.6.0",
     "@babylonjs/havok": "^1.0.1"
   }
 }
