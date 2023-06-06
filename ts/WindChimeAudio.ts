@@ -1,7 +1,7 @@
 //WunderVision 2023
 //www.wundervisionengineering.com
 import { WindChime } from "./WindChime";
-import { WindChimeRod } from "./WindChimeRod";
+import { WindChimeRod, WindChimeRodCollision } from "./WindChimeRod";
 
 export class WindChimeAudio {
 
@@ -40,7 +40,7 @@ export class WindChimeAudio {
         this._gainNode = this._audioContext.createGain();
         this._lastStikeTime = 0;
         this.initializeAudio();
-        this._windChimeRod.addEventListener("impact", this.play.bind(this));
+        this._windChimeRod.onCollisionEvent.add(this.play.bind(this));
     }
 
     private initializeAudio() {
@@ -56,17 +56,22 @@ export class WindChimeAudio {
         this._lastStikeTime = this._audioContext.currentTime;
     }
 
-    public play() {
+    public play(windChimeRodEvent:WindChimeRodCollision) {
         if (!this._oscillatorRunning) {
             this._oscillator.start();
             this._oscillatorRunning = true;
         }
         const delta = this._audioContext.currentTime - this._lastStikeTime;
-        this._lastStikeTime = this._audioContext.currentTime;
+        this._lastStikeTime = this._audioContext.currentTime;        
         if (delta > 0.1) {
-            this._gainNode.gain.setValueAtTime(0.5, this._audioContext.currentTime);
-            this._gainNode.gain.setTargetAtTime(0.25, this._audioContext.currentTime, 0.1);
-            this._gainNode.gain.setTargetAtTime(0, this._audioContext.currentTime, 1);
+            const impact = Math.max(windChimeRodEvent.impactValue * 10, 0.1);
+            if(impact > this._gainNode.gain.value){
+            this._gainNode.gain.cancelScheduledValues(this._audioContext.currentTime);
+            //this._gainNode.gain.setValueAtTime(0.5, this._audioContext.currentTime);
+            this._gainNode.gain.linearRampToValueAtTime(Math.min(0.4, this._gainNode.gain.value + impact), this._audioContext.currentTime + 0.01);
+            this._gainNode.gain.exponentialRampToValueAtTime(0.001, this._audioContext.currentTime + 10);
+            //this._gainNode.gain.setTargetAtTime(0, this._audioContext.currentTime, 1);
+            }
         }
 
     }
