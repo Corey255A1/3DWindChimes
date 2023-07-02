@@ -75,4 +75,9 @@ export class WindChimeAudio {
         }
 
     }
+
+    public dispose(){
+        this._gainNode.disconnect();
+        this._oscillator.disconnect();
+    }
 }

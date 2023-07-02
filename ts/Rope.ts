@@ -30,7 +30,7 @@ export class Rope {
 
     private makePhysics():Array<PhysicsAggregate>{
         const physicsSegments = this._segments.map(mesh => {
-            return new PhysicsAggregate(mesh, PhysicsShapeType.CYLINDER, { mass: 0.1, restitution: 0 }, this._scene);
+            return new PhysicsAggregate(mesh, PhysicsShapeType.CYLINDER, { mass: this._segmentLength, restitution: 0 }, this._scene);
         });
         const bottomOffset = new Vector3(0, -this._segmentLength / 2, 0);
         const topOffset = new Vector3(0, this._segmentLength / 2, 0);
@@ -67,5 +67,10 @@ export class Rope {
 
     public getPhysicsSegment(index:number):PhysicsAggregate{
         return this._physicsSegments[index];
+    }
+
+    public dispose(){
+        this._physicsSegments.forEach(segment=>segment.dispose());
+        this._segments.forEach(segment=>segment.dispose());
     }
 }

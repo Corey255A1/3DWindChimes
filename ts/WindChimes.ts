@@ -6,7 +6,7 @@ import {
     Mesh, Scene, Engine,
     Camera, HemisphericLight, Vector3, AssetsManager,
     ArcRotateCamera, KeyboardInfo, KeyboardEventTypes,
-    EventState, WebXRState, MeshBuilder, HavokPlugin, PhysicsViewer, EquiRectangularCubeTexture, PBRMaterial, Texture
+    EventState, WebXRState, MeshBuilder, HavokPlugin, PhysicsViewer, EquiRectangularCubeTexture, PBRMaterial, Texture, WebXRDefaultExperience, WebXRBackgroundRemover, SphereBuilder, WebXRHitTest, Quaternion
 } from "@babylonjs/core";
 import { WindChime, WindChimeEventData } from "./WindChime";
 import { WindChimeRod } from "./WindChimeRod";
@@ -26,17 +26,20 @@ export class WindChimes {
     private _windTimer: any;
     private _uiTexture: AdvancedDynamicTexture;
     private _windButton: Button;
+    private _xrExperience: WebXRDefaultExperience | null;
+    private _setPosition: boolean;
+    private _skyBox: Mesh | null;
     constructor(canvasID: string) {
         this._canvas = document.getElementById(canvasID) as HTMLCanvasElement;
         if (this._canvas == null) { throw "Could not find canvas"; }
 
         this._audioContext = new AudioContext();
-
+        this._setPosition = false;
         this._engine = new Engine(this._canvas, true);
         this._scene = new Scene(this._engine);
 
         const backgroundTexture = new EquiRectangularCubeTexture('360view_low.jpg', this._scene, 512);
-        this._scene.createDefaultSkybox(backgroundTexture, true);
+        this._skyBox = this._scene.createDefaultSkybox(backgroundTexture, true);
 
         this._windChimeAudios = new Array<WindChimeAudio>();
         this._windChime = null;
@@ -70,27 +73,78 @@ export class WindChimes {
         this._windButton.width = "160px";
         this._windButton.height = "80px";
         this._windButton.top = "30%";
+        this._windButton.left = "-80px"
         this._windButton.color = 'white';
         this._windButton.background = 'green';
-        this._uiTexture.addControl(this._windButton);
 
+        this._uiTexture.addControl(this._windButton);
+        
+        this._xrExperience = null;
+        this.initializeXR();
+    }
+
+    private async initializeXR(){
+        this._xrExperience = await this._scene.createDefaultXRExperienceAsync({
+            uiOptions: {
+                sessionMode: 'immersive-ar'
+            },
+            optionalFeatures: true
+        });
+        this._xrExperience.baseExperience.featuresManager.enableFeature(WebXRBackgroundRemover, "latest", {
+            backgroundMeshes:[this._skyBox],
+            environmentHelperRemovalFlags:{
+                skyBox:true, ground:true
+            }
+        });
+
+        this._xrExperience.baseExperience.sessionManager.onXRSessionInit.addOnce(()=>{
+            this._windChime?.dispose();
+            this._windChime = null;
+            this._setPosition = true;
+
+            const positionChime = Button.CreateSimpleButton('positionWindChime', 'Set Position');
+            positionChime.onPointerClickObservable.add(() => { 
+                this._setPosition = true;
+            });
+            positionChime.width = "160px";
+            positionChime.height = "80px";
+            positionChime.top = "30%";
+            positionChime.left = "80px"
+            positionChime.color = 'white';
+            positionChime.background = 'green';
+            this._uiTexture.addControl(positionChime);
+        })
+
+
+
+
+        const hitTest = this._xrExperience.baseExperience.featuresManager.enableFeature(WebXRHitTest, 'latest',{
+            disablePermanentHitTest:true,
+            enableTransientHitTest:true
+        }) as WebXRHitTest
+
+        hitTest.onHitTestResultObservable.add((results) => {
+            if (this._setPosition && results.length) {
+                let position = new Vector3();
+                results[0].transformationMatrix.decompose(undefined, undefined, position);
+                position.y += 2;
+                this.makeWindchime(position, 0.1);
+                this._setPosition = false;
+            }
+        });
+
+        return;
     }
 
     private initializePhysics(havok: HavokPhysicsWithBindings) {
         const gravityVector = new Vector3(0, -9.81, 0);
         const physicsPlugin = new HavokPlugin(true, havok);
+        
         this._scene.enablePhysics(gravityVector, physicsPlugin);
-
-        this._windChime = new WindChime(new Vector3(0, 1, 0), 1, 5, this._scene);
-        this._windChimeAudios.push(new WindChimeAudio(this._windChime.addNewRod(5), this._audioContext));
-        this._windChimeAudios.push(new WindChimeAudio(this._windChime.addNewRod(6), this._audioContext));
-        this._windChimeAudios.push(new WindChimeAudio(this._windChime.addNewRod(7), this._audioContext));
-        this._windChimeAudios.push(new WindChimeAudio(this._windChime.addNewRod(8), this._audioContext));
-        this._windChimeAudios.push(new WindChimeAudio(this._windChime.addNewRod(9), this._audioContext));
-        this._windChime?.addEventListener("impact", this.onRodImpact.bind(this));
+        this.makeWindchime(new Vector3(0, 1, 0), 0.1);
         this._canvas.addEventListener('pointerdown', () => {
             this._audioContext.resume();
-        });
+        },{once:true});
 
         // const physicsViewer = new PhysicsViewer();
         // for (const mesh of this._scene.rootNodes) {
@@ -99,6 +153,20 @@ export class WindChimes {
         //         const debugMesh = physicsViewer.showBody(body);
         //     }
         // }
+    }
+
+    private makeWindchime(position:Vector3, scale:number){
+        if(this._windChime != null){
+            this._windChime.dispose();
+            this._windChimeAudios.forEach(audio=>audio.dispose());
+        }
+        this._windChime = new WindChime(position, scale, 5, this._scene);
+        this._windChimeAudios.push(new WindChimeAudio(this._windChime.addNewRod(5), this._audioContext));
+        this._windChimeAudios.push(new WindChimeAudio(this._windChime.addNewRod(6), this._audioContext));
+        this._windChimeAudios.push(new WindChimeAudio(this._windChime.addNewRod(7), this._audioContext));
+        this._windChimeAudios.push(new WindChimeAudio(this._windChime.addNewRod(8), this._audioContext));
+        this._windChimeAudios.push(new WindChimeAudio(this._windChime.addNewRod(9), this._audioContext));
+        this._windChime?.addEventListener("impact", this.onRodImpact.bind(this));
     }
 
 
@@ -140,7 +208,7 @@ export class WindChimes {
 
     public setRandomWindLocation() {
         const radial = Math.random() * 2 * Math.PI;
-        this._windLocation.set(10 * Math.cos(radial), 0, 10 * Math.sin(radial));
+        this._windLocation.set(5 * Math.cos(radial), 0, 5 * Math.sin(radial));
     }
 
 }

@@ -2,7 +2,7 @@
 //www.wundervisionengineering.com
 import { Rope } from "./Rope";
 import { WindChimeRod } from "./WindChimeRod";
-import { Axis, BallAndSocketConstraint, Color3, LinesMesh, Material, Mesh, MeshBuilder, PBRMaterial, PhysicsAggregate, PhysicsShapeType, Scene, StandardMaterial, Texture, Vector3 } from "@babylonjs/core";
+import { Axis, BallAndSocketConstraint, Color3, LinesMesh, Material, Mesh, MeshBuilder, PBRMaterial, PhysicsAggregate, PhysicsShapeType, Scene, StandardMaterial, Texture, TransformNode, Vector3 } from "@babylonjs/core";
 
 export interface WindChimeEventData {
     windChime: WindChime,
@@ -13,29 +13,32 @@ export class WindChime extends EventTarget {
     private _radius: number;
     private _numberOfRods: number;
     private _rods: Array<WindChimeRod>;
+    private _ropes: Array<Rope>;
     private _discThickness: number;
     private _discMaterial: Material;
     private _body: Mesh;
     private _bodyPhysics: PhysicsAggregate;
     private _knocker: Mesh;
+    private _knockerPhysics: PhysicsAggregate;
     private _blower: Mesh;
     private _blowerPhyiscs: PhysicsAggregate;
     private _mainRope: Rope;
     private _secondaryRope: Rope;
     private _scene: Scene;
-    
+
     constructor(position: Vector3, radius: number, numberOfRods: number, scene: Scene) {
         super();
         this._radius = radius;
         this._numberOfRods = numberOfRods;
         this._rods = new Array<WindChimeRod>();
+        this._ropes = new Array<Rope>();
         this._scene = scene;
 
-        const knockerOffset = 4;
-        const blowerOffset = 10;
-        const ropeSegmentLength = 1;
+        const knockerOffset = this._radius * 4;
+        const blowerOffset = this._radius * 10;
+        const ropeSegmentLength = this._radius;
         const halfRopeSegmentLenght = ropeSegmentLength / 2;
-        this._discThickness = 0.2;
+        this._discThickness = this._radius * 0.2;
         const halfDiscThickness = this._discThickness / 2;
 
         // const material = new StandardMaterial('disc_material', scene);
@@ -59,13 +62,13 @@ export class WindChime extends EventTarget {
 
         this._knocker = this.createKnocker(this._mainRope.bottom.add(new Vector3(0, -halfDiscThickness, 0)), radius * 0.4, this._discThickness);
         this._knocker.material = this._discMaterial;
-        const physicsKnocker = new PhysicsAggregate(this._knocker, PhysicsShapeType.CYLINDER, { mass: 2, restitution: 0 }, scene);
+        this._knockerPhysics = new PhysicsAggregate(this._knocker, PhysicsShapeType.CYLINDER, { mass: this._radius * 2, restitution: 0 }, scene);
 
         this._secondaryRope = new Rope(this._knocker.position.add(new Vector3(0, -halfDiscThickness, 0)), blowerOffset, ropeSegmentLength, this._scene);
 
         this._blower = this.createBlower(this._secondaryRope.bottom.add(new Vector3(0, -radius, 0)), radius / 2, this._discThickness);
         this._blower.material = this._discMaterial;
-        this._blowerPhyiscs = new PhysicsAggregate(this._blower, PhysicsShapeType.CYLINDER, { mass: 10, restitution: 0 }, scene);
+        this._blowerPhyiscs = new PhysicsAggregate(this._blower, PhysicsShapeType.CYLINDER, { mass: this._radius * 10, restitution: 0 }, scene);
 
 
         // Top of Rope to Body
@@ -88,7 +91,7 @@ export class WindChime extends EventTarget {
             scene
         );
         ropeSegmentPhysics = this._mainRope.getPhysicsSegment(this._mainRope.segmentCount - 1);
-        ropeSegmentPhysics.body.addConstraint(physicsKnocker.body, joint);
+        ropeSegmentPhysics.body.addConstraint(this._knockerPhysics.body, joint);
 
         // Knocker to Second Rope
         joint = new BallAndSocketConstraint(
@@ -99,7 +102,7 @@ export class WindChime extends EventTarget {
             scene
         );
         ropeSegmentPhysics = this._secondaryRope.getPhysicsSegment(0);
-        physicsKnocker.body.addConstraint(ropeSegmentPhysics.body, joint);
+        this._knockerPhysics.body.addConstraint(ropeSegmentPhysics.body, joint);
 
         // Second Rope to blower
         joint = new BallAndSocketConstraint(
@@ -150,14 +153,42 @@ export class WindChime extends EventTarget {
         return body;
     }
 
+    public dispose() {
+        this._bodyPhysics.dispose();
+        this._blowerPhyiscs.dispose();
+        this._knockerPhysics.dispose();
+        this._rods.forEach(rod =>rod.dispose());
+        this._ropes.forEach(rope=>rope.dispose());
+        this._body.dispose();
+        this._knocker.dispose();
+        this._blower.dispose();
+        this._mainRope.dispose();
+        this._secondaryRope.dispose();
+    }
+
+    public get radius():number{
+        return this._radius;
+    }
+
+    public set position(value: Vector3) {
+        this._bodyPhysics.transformNode.position = value.clone();
+    }
+
+    public get transformNode(): TransformNode {
+        return this._bodyPhysics.transformNode;
+    }
+
     public addNewRod(length: number): WindChimeRod {
-        const radius = this._radius - 0.2;
+        const radius = this._radius * 0.8;
+        const scaledLength = length * this._radius;
         const currentRod = this._rods.length * (2 * Math.PI / this._numberOfRods);
         const x = radius * Math.cos(currentRod);
         const z = radius * Math.sin(currentRod);
-        const ropeSegmentLength = 0.2;
-        const rodRope = new Rope(this._body.position.add(new Vector3(x, -this._discThickness / 2, z)), 1, ropeSegmentLength, this._scene);
-        const rod = new WindChimeRod(new Vector3(x, (rodRope.bottom.y - ropeSegmentLength / 2) - length / 2, z), length, 0.2, this._scene);
+        const ropeSegmentLength = this._radius * 0.2;
+        const rodRope = new Rope(this._body.position.add(new Vector3(x, -this._discThickness / 2, z)), this._radius, ropeSegmentLength, this._scene);
+        const rodPosition = this._body.position.add(new Vector3(x, 0, z));
+        rodPosition.y = (rodRope.bottom.y - ropeSegmentLength / 2) - scaledLength / 2;
+        const rod = new WindChimeRod(rodPosition, length, 0.2, this._radius, this._scene);
 
         let joint = new BallAndSocketConstraint(
             new Vector3(x, -this._discThickness / 2, z),
@@ -171,7 +202,7 @@ export class WindChime extends EventTarget {
 
         joint = new BallAndSocketConstraint(
             new Vector3(0, -ropeSegmentLength / 2, 0),
-            new Vector3(0, length / 2, 0),
+            new Vector3(0, scaledLength / 2, 0),
             new Vector3(0, 1, 0),
             new Vector3(0, 1, 0),
             this._scene
@@ -179,14 +210,15 @@ export class WindChime extends EventTarget {
         ropeSegmentPhysics = rodRope.getPhysicsSegment(rodRope.segmentCount - 1);
         ropeSegmentPhysics.body.addConstraint(rod.body, joint);
 
-        this.addRod(rod);
+        this.addRod(rod, rodRope);
 
         return rod;
     }
 
-    public addRod(rod: WindChimeRod) {
+    public addRod(rod: WindChimeRod, rope:Rope) {
         rod.addEventListener("impact", this.processRodImpact.bind(this));
         this._rods.push(rod);
+        this._ropes.push(rope);
     }
 
     public removeRod(rod: WindChimeRod) {
@@ -198,6 +230,7 @@ export class WindChime extends EventTarget {
 
 
     public applyWind(magnitude: number, location: Vector3) {
+        magnitude *= this._radius;
         const windLocation = this._blowerPhyiscs.transformNode.getAbsolutePosition().add(location);
         const windDirection = windLocation.clone().normalize().scale(-magnitude);
         this._blowerPhyiscs.body.applyForce(windDirection, this._blowerPhyiscs.transformNode.getAbsolutePosition());
